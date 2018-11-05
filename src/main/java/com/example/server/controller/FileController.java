@@ -1,5 +1,6 @@
 package com.example.server.controller;
 
+import com.example.server.model.FileData;
 import com.example.server.model.User;
 import com.example.server.payload.UploadFileResponse;
 import com.example.server.service.FileStorageService;
@@ -9,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +19,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.util.List;
 
 @RestController
 public class FileController {
@@ -66,6 +69,16 @@ public class FileController {
                 .contentType(MediaType.parseMediaType(contentType))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + resource.getFilename() + "\"")
                 .body(resource);
+    }
+
+    @CrossOrigin("http://localhost:4200")
+    @RequestMapping(value = "/getFiles", method = RequestMethod.GET)
+    public ResponseEntity<List<FileData>> uploadFile(@RequestHeader(value = "Authorization") String basicAuthHeader) {
+        String decodedUserName = new String(Base64.decodeBase64(basicAuthHeader.split(" ")[1])).split(":")[0];
+        User user = new User(decodedUserName);
+        System.out.println("Getting files for user: " + user.getUserName());
+        List<FileData> fileList = fileStorageService.getUsersFiles(user);
+        return new ResponseEntity<List<FileData>>(fileList, HttpStatus.OK);
     }
 
 }

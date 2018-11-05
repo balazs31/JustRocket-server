@@ -2,6 +2,7 @@ package com.example.server.service;
 
 import com.example.server.exception.FileStorageException;
 import com.example.server.exception.MyFileNotFoundException;
+import com.example.server.model.FileData;
 import com.example.server.model.User;
 import com.example.server.property.FileStorageProperties;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,12 +12,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 public class FileStorageService {
@@ -73,5 +77,17 @@ public class FileStorageService {
         } catch (MalformedURLException ex) {
             throw new MyFileNotFoundException("File not found " + fileName, ex);
         }
+    }
+
+    public List<FileData> getUsersFiles (User user) {
+        List<FileData> fileList = new ArrayList<>();
+        File[] files = new File(fileStorageProperties.getUploadDir() + "/" + user.getUserName()).listFiles();
+        if(files != null) {
+            for (File file : files) {
+                fileList.add(new FileData(file.getName(), file.length()));
+            }
+        }
+
+        return fileList;
     }
 }
