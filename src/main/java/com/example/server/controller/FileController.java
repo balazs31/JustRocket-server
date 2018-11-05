@@ -1,7 +1,9 @@
 package com.example.server.controller;
 
+import com.example.server.model.User;
 import com.example.server.payload.UploadFileResponse;
 import com.example.server.service.FileStorageService;
+import org.apache.tomcat.util.codec.binary.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,11 +28,14 @@ public class FileController {
 
     @CrossOrigin("http://localhost:4200")
     @RequestMapping(value = "/uploadFile", method = RequestMethod.POST)
-    public UploadFileResponse uploadFile(@RequestParam("file") MultipartFile file) {
-        String fileName = fileStorageService.storeFile(file);
+    public UploadFileResponse uploadFile(@RequestHeader(value = "Authorization") String basicAuthHeader, @RequestParam("file") MultipartFile file) {
+        String decodedUserName = new String(Base64.decodeBase64(basicAuthHeader.split(" ")[1])).split(":")[0];
+        User user = new User(decodedUserName);
+        String fileName = fileStorageService.storeFile(file, user);
 
         String fileDownloadUri = ServletUriComponentsBuilder.fromCurrentContextPath()
                 .path("/downloadFile/")
+                .path(decodedUserName + "/")
                 .path(fileName)
                 .toUriString();
 
@@ -39,9 +44,12 @@ public class FileController {
     }
 
     @CrossOrigin("http://localhost:4200")
-    @RequestMapping(value = "/getFiles", method = RequestMethod.GET)
-    public ResponseEntity<Resource> downloadFile(@PathVariable String fileName, HttpServletRequest request) {
-        Resource resource = fileStorageService.loadFileAsResource(fileName);
+    @GetMapping("/downloadFile/{fileName:.+}")
+    public ResponseEntity<Resource> downloadFile(@RequestHeader(value = "Authorization") String basicAuthHeader, @PathVariable String fileName, HttpServletRequest request) {
+        String decodedUserName = new String(Base64.decodeBase64(basicAuthHeader.split(" ")[1])).split(":")[0];
+        User user = new User(decodedUserName);
+
+        Resource resource = fileStorageService.loadFileAsResource(fileName, user);
 
         String contentType = null;
         try {
@@ -59,4 +67,5 @@ public class FileController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + resource.getFilename() + "\"")
                 .body(resource);
     }
+
 }

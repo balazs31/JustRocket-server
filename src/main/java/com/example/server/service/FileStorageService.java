@@ -2,6 +2,7 @@ package com.example.server.service;
 
 import com.example.server.exception.FileStorageException;
 import com.example.server.exception.MyFileNotFoundException;
+import com.example.server.model.User;
 import com.example.server.property.FileStorageProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
@@ -20,11 +21,16 @@ import java.nio.file.StandardCopyOption;
 @Service
 public class FileStorageService {
 
-    private final Path fileStorageLocation;
-
+    private Path fileStorageLocation;
+    private FileStorageProperties fileStorageProperties;
     @Autowired
     public FileStorageService(FileStorageProperties fileStorageProperties) {
-        this.fileStorageLocation = Paths.get(fileStorageProperties.getUploadDir())
+        this.fileStorageProperties = fileStorageProperties;
+    }
+
+    private void setFileStorageLocation(String userName) {
+        System.out.println(this.fileStorageProperties.getUploadDir());
+        this.fileStorageLocation = Paths.get(fileStorageProperties.getUploadDir() + "/" + userName)
                 .toAbsolutePath().normalize();
 
         try {
@@ -34,17 +40,16 @@ public class FileStorageService {
         }
     }
 
-    public String storeFile(MultipartFile file) {
-        // Normalize file name
+    public String storeFile(MultipartFile file, User user) {
         String fileName = StringUtils.cleanPath(file.getOriginalFilename());
 
         try {
-            // Check if the file's name contains invalid characters
             if(fileName.contains("..")) {
                 throw new FileStorageException("Sorry! Filename contains invalid path sequence " + fileName);
             }
 
-            // Copy file to the target location (Replacing existing file with the same name)
+            setFileStorageLocation(user.getUserName());
+            System.out.println(user.getUserName());
             Path targetLocation = this.fileStorageLocation.resolve(fileName);
             Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
 
@@ -54,8 +59,10 @@ public class FileStorageService {
         }
     }
 
-    public Resource loadFileAsResource(String fileName) {
+
+    public Resource loadFileAsResource(String fileName, User user) {
         try {
+            setFileStorageLocation(user.getUserName());
             Path filePath = this.fileStorageLocation.resolve(fileName).normalize();
             Resource resource = new UrlResource(filePath.toUri());
             if(resource.exists()) {
